@@ -68,6 +68,7 @@ typedef struct {
 	XftColor norm[ColLast];
 	XftColor sel[ColLast];
 	XftColor urg[ColLast];
+	XftColor win[ColLast];
 	Drawable drawable;
 	GC gc;
 	struct {
@@ -80,6 +81,8 @@ typedef struct {
 
 typedef struct {
 	char name[256];
+	char title[256];
+	Bool titleset;
 	Window win;
 	int tabx;
 	Bool urgent;
@@ -118,6 +121,9 @@ static void manage(Window win);
 static void maprequest(const XEvent *e);
 static void move(const Arg *arg);
 static void movetab(const Arg *arg);
+static void renametab(const Arg *arg);
+static void settabtitle(const char *title, unsigned int size);
+static void unsettabtitle(const char *title, unsigned int size);
 static void propertynotify(const XEvent *e);
 static void resize(int c, int w, int h);
 static void rotate(const Arg *arg);
@@ -322,7 +328,7 @@ drawbar(void)
 		dc.x = 0;
 		dc.w = ww;
 		XFetchName(dpy, win, &name);
-		drawtext(name ? name : "", dc.norm);
+		drawtext(name ? name : "", dc.win);
 		XCopyArea(dpy, dc.drawable, win, dc.gc, 0, 0, ww, bh, 0, 0);
 		XSync(dpy, False);
 
@@ -358,7 +364,12 @@ drawbar(void)
 		} else {
 			col = clients[c]->urgent ? dc.urg : dc.norm;
 		}
-		drawtext(clients[c]->name, col);
+
+		if (clients[c]->titleset) {
+			drawtext(clients[c]->title, col);
+		} else {
+			drawtext(clients[c]->name, col);
+		}
 		dc.x += dc.w;
 		clients[c]->tabx = dc.x;
 	}
@@ -812,6 +823,56 @@ movetab(const Arg *arg)
 }
 
 void
+renametab(const Arg *arg)
+{
+	if (nclients < 2)
+		return;
+
+	unsigned int bufsize = sizeof(clients[sel]->title);
+	char cmd[128];
+	char buf[bufsize];
+	memset(&buf[0], 0, sizeof(buf));
+
+	snprintf(cmd, sizeof(cmd), "echo -n \"\" | dmenu -p \"Enter title:\" -w 0x%lx", win);
+
+	FILE *fp;
+	if ((fp = popen(cmd, "r")) == NULL) {
+		printf("Error opening pipe!\n");
+		return;
+	}
+
+	fgets(buf, bufsize, fp);
+	buf[strcspn(buf, "\n")] = 0;
+
+	int rc = pclose(fp);
+	if (!rc) {
+		if (strlen(buf) > 0) {
+			settabtitle(buf, bufsize);
+		} else {
+			unsettabtitle(buf, bufsize);
+		}
+	}
+}
+
+void
+settabtitle(const char *title, unsigned int size)
+{
+	Client *c = clients[sel];
+	strncpy(c->title, title, size);
+	c->titleset = True;
+	drawbar();
+}
+
+void
+unsettabtitle(const char *title, unsigned int size)
+{
+	Client *c = clients[sel];
+	memset(&(c->title[0]), 0, size);
+	c->titleset = False;
+	drawbar();
+}
+
+void
 propertynotify(const XEvent *e)
 {
 	const XPropertyEvent *ev = &e->xproperty;
@@ -1023,6 +1084,8 @@ setup(void)
 
 	dc.norm[ColBG] = getcolor(normbgcolor);
 	dc.norm[ColFG] = getcolor(normfgcolor);
+	dc.win[ColBG] = getcolor(winbgcolor);
+	dc.win[ColFG] = getcolor(winfgcolor);
 	dc.sel[ColBG] = getcolor(selbgcolor);
 	dc.sel[ColFG] = getcolor(selfgcolor);
 	dc.urg[ColBG] = getcolor(urgbgcolor);
@@ -1032,7 +1095,7 @@ setup(void)
 	dc.gc = XCreateGC(dpy, root, 0, 0);
 
 	win = XCreateSimpleWindow(dpy, root, wx, wy, ww, wh, 0,
-	                          dc.norm[ColFG].pixel, dc.norm[ColBG].pixel);
+	                          dc.win[ColFG].pixel, dc.win[ColBG].pixel);
 	XMapRaised(dpy, win);
 	XSelectInput(dpy, win, SubstructureNotifyMask | FocusChangeMask |
 	             ButtonPressMask | ExposureMask | KeyPressMask |

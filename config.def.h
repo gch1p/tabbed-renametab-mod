@@ -4,6 +4,8 @@
 static const char font[]        = "monospace:size=9";
 static const char* normbgcolor  = "#222222";
 static const char* normfgcolor  = "#cccccc";
+static const char* winbgcolor   = "#000000";
+static const char* winfgcolor   = "#cccccc";
 static const char* selbgcolor   = "#555555";
 static const char* selfgcolor   = "#ffffff";
 static const char* urgbgcolor   = "#111111";
@@ -38,6 +40,7 @@ static Key keys[] = {
 	/* modifier             key        function     argument */
 	{ MODKEY|ShiftMask,     XK_Return, focusonce,   { 0 } },
 	{ MODKEY|ShiftMask,     XK_Return, spawn,       { 0 } },
+	{ MODKEY|ShiftMask,     XK_Up,     renametab,   { 0 } },
 
 	{ MODKEY|ShiftMask,     XK_l,      rotate,      { .i = +1 } },
 	{ MODKEY|ShiftMask,     XK_h,      rotate,      { .i = -1 } },
