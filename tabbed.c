@@ -825,7 +825,7 @@ movetab(const Arg *arg)
 void
 renametab(const Arg *arg)
 {
-	if (nclients < 2)
+	if (nclients < 1)
 		return;
 
 	unsigned int bufsize = sizeof(clients[sel]->title);
